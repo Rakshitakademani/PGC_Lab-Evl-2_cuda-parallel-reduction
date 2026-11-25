@@ -207,91 +207,65 @@ The optimised implementation reduces synchronisation and shared-memory work by u
 The block size is configurable at compile time through the `BLOCK_SIZE` macro. The experiment evaluates 64, 128, 256, 512 and 1024 threads per block.
 
 
+
 ## 8. Project Architecture and Workflow
 
-The project follows a structured execution pipeline consisting of input generation, parallel processing, result aggregation, correctness validation and performance analysis.
+The project follows a structured workflow in which the same input dataset is processed using three different implementations. Their outputs are then validated and compared to evaluate correctness and performance.
 
-### 8.1 System Architecture
+### 8.1 Project Architecture
 
 ```mermaid
-flowchart TB
-    A(["INPUT DATASET<br/>16,777,216 Float Elements"])
+flowchart TD
+    A(["INPUT DATASET<br/>2²⁴ Floating-Point Elements"])
 
     A --> B["Data Initialisation<br/>Host Memory"]
 
-    B --> C{"Execution Strategy"}
+    B --> C{"Processing Approach"}
 
-    subgraph CPU["STAGE 1 — CPU PROCESSING"]
-        direction TB
-        D["CPU Sequential Reduction"]
-        D --> E["Reference Sum<br/>Double Precision"]
-    end
+    C --> D["CPU Sequential Reduction"]
+    C --> E["Naive CUDA Reduction"]
+    C --> F["Optimised CUDA Reduction"]
 
-    subgraph GPU["STAGE 2 — GPU PROCESSING"]
-        direction LR
+    D --> G["CPU Reference Sum"]
+    
+    E --> H["Shared Memory Reduction<br/>Interleaved Addressing<br/>Thread Synchronisation"]
 
-        subgraph N["Naive CUDA"]
-            direction TB
-            F["Global Memory Loading"]
-            G["Shared Memory Reduction"]
-            H["Thread Synchronisation"]
-            I["Atomic Addition"]
-            F --> G --> H --> I
-        end
+    F --> I["Multiple Elements per Thread<br/>Warp Shuffle Operations<br/>Shared Memory Reduction"]
 
-        subgraph O["Optimised CUDA"]
-            direction TB
-            J["Multiple Elements per Thread"]
-            K["Warp Shuffle Reduction"]
-            L["Shared Memory<br/>Warp Partial Sums"]
-            M["Atomic Addition"]
-            J --> K --> L --> M
-        end
-    end
+    H --> J["Naive GPU Result"]
+    I --> K["Optimised GPU Result"]
 
-    C --> D
-    C --> F
-    C --> J
+    G --> L["Correctness Validation"]
+    J --> L
+    K --> L
 
-    E --> P["Reference Result"]
-    I --> Q["Naive GPU Result"]
-    M --> R["Optimised GPU Result"]
+    L --> M{"Absolute Error ≤ 5.0?"}
 
-    subgraph ANALYSIS["STAGE 3 — VALIDATION AND PERFORMANCE ANALYSIS"]
-        direction TB
-        S["Correctness Validation<br/>Absolute Error ≤ 5.0"]
-        T["Execution Time Comparison"]
-        U["Block Size Evaluation"]
-        V["Performance Metrics"]
-        W["Graphical Visualisation"]
-        S --> T --> U --> V --> W
-    end
+    M -->|PASS| N["Performance Analysis"]
+    M -->|FAIL| O["Review Implementation"]
 
-    P --> S
-    Q --> S
-    R --> S
+    N --> P["Execution Time Comparison"]
+    P --> Q["Block Size Evaluation"]
+    Q --> R["Bandwidth and Speedup Analysis"]
 
-    W --> X(["FINAL EXPERIMENTAL REPORT"])
+    R --> S["Performance Graphs"]
+    S --> T(["FINAL EXPERIMENTAL RESULTS"])
 
-    classDef input fill:#17365D,color:#FFFFFF,stroke:#10243A,stroke-width:2px
-    classDef cpu fill:#DCE6F1,color:#17365D,stroke:#4472C4,stroke-width:1.5px
+    classDef input fill:#17365D,color:#FFFFFF,stroke:#17365D,stroke-width:2px
+    classDef decision fill:#FFF2CC,color:#7F6000,stroke:#BF9000,stroke-width:1.5px
+    classDef cpu fill:#DDEBF7,color:#1F4E79,stroke:#4472C4,stroke-width:1.5px
     classDef naive fill:#FCE4D6,color:#843C0C,stroke:#C65911,stroke-width:1.5px
-    classDef optimised fill:#E2F0D9,color:#375623,stroke:#70AD47,stroke-width:1.5px
+    classDef opt fill:#E2F0D9,color:#375623,stroke:#70AD47,stroke-width:1.5px
     classDef analysis fill:#E4DFEC,color:#403152,stroke:#8064A2,stroke-width:1.5px
-    classDef output fill:#17365D,color:#FFFFFF,stroke:#10243A,stroke-width:2px
+    classDef output fill:#17365D,color:#FFFFFF,stroke:#17365D,stroke-width:2px
 
     class A,B input
-    class D,E cpu
-    class F,G,H,I,Q naive
-    class J,K,L,M,R optimised
-    class P,S,T,U,V,W analysis
-    class X output
-
-    style CPU fill:#F3F6FA,stroke:#4472C4,stroke-width:2px
-    style GPU fill:#FAFAFA,stroke:#666666,stroke-width:2px
-    style N fill:#FFF4EC,stroke:#C65911
-    style O fill:#F1F8EC,stroke:#70AD47
-    style ANALYSIS fill:#F5F1F9,stroke:#8064A2,stroke-width:2px
+    class C,M decision
+    class D,G cpu
+    class E,H,J naive
+    class F,I,K opt
+    class L,N,O,P,Q,R,S analysis
+    class T output
 ```
 
 ### 8.2 Workflow Description
@@ -299,19 +273,23 @@ flowchart TB
 | Stage | Description |
 |---|---|
 | Input Generation | Generates an array of 16,777,216 floating-point elements. |
-| CPU Processing | Performs sequential summation and generates the reference result. |
+| Data Initialisation | Initialises the input data in host memory. |
+| CPU Processing | Performs sequential summation to generate the reference result. |
 | Naive CUDA Processing | Uses shared memory, interleaved addressing and thread synchronisation. |
 | Optimised CUDA Processing | Uses multiple elements per thread and warp shuffle operations. |
 | Result Aggregation | Collects the CPU and GPU reduction results. |
-| Correctness Validation | Compares GPU results against the CPU reference using an absolute error tolerance of 5.0. |
-| Performance Analysis | Evaluates execution time, block size and effective memory bandwidth. |
-| Graphical Visualisation | Presents the experimental results through performance graphs. |
+| Correctness Validation | Checks GPU results against the CPU reference using an absolute error tolerance of 5.0. |
+| Performance Analysis | Evaluates execution time, block size, bandwidth and speedup. |
+| Graphical Representation | Presents the experimental results using performance graphs. |
 
-### 8.3 Overall Execution Flow
+### 8.3 Workflow Explanation
 
-The input dataset is processed using three different implementations. The CPU implementation generates the reference sum, while the two CUDA implementations execute parallel reduction on the GPU.
+The input dataset is initialised in host memory and processed through three approaches: CPU sequential reduction, naive CUDA reduction and optimised CUDA reduction.
 
-The resulting values are passed to the validation stage to verify numerical correctness. After validation, execution times and block-size configurations are analysed to identify the most efficient CUDA implementation.
+The CPU implementation generates the reference sum, while both CUDA implementations calculate the sum using GPU parallelism. Their outputs are compared against the CPU reference to verify numerical correctness.
+
+After successful validation, execution time, block-size configurations, effective bandwidth and speedup are analysed. The experimental findings are finally represented through graphs and performance reports.
+
 
 ## 9. Repository Structure
 
