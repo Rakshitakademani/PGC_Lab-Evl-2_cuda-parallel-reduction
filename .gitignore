@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Compiled executables
+bin/
+*.o
+*.out
+
+# CUDA generated files
+*.cubin
+*.ptx
+
+# Editor files
+.vscode/
+.idea/

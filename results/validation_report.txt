@@ -1,0 +1,35 @@
+CUDA REDUCTION VALIDATION
+=========================
+CPU Reference Sum: 8472487.359375
+Allowed Absolute Error: 5.0
+
+Naive_CUDA
+GPU Sum: 8472488.0
+Absolute Error: 0.640625
+Validation: PASS
+-------------------------
+Optimised_CUDA_64
+GPU Sum: 8472487.0
+Absolute Error: 0.359375
+Validation: PASS
+-------------------------
+Optimised_CUDA_128
+GPU Sum: 8472489.0
+Absolute Error: 1.640625
+Validation: PASS
+-------------------------
+Optimised_CUDA_256
+GPU Sum: 8472487.0
+Absolute Error: 0.359375
+Validation: PASS
+-------------------------
+Optimised_CUDA_512
+GPU Sum: 8472487.0
+Absolute Error: 0.359375
+Validation: PASS
+-------------------------
+Optimised_CUDA_1024
+GPU Sum: 8472485.0
+Absolute Error: 2.359375
+Validation: PASS
+-------------------------
